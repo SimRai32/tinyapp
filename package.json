@@ -16,5 +16,8 @@
   "bugs": {
     "url": "https://github.com/SimRai32/tinyapp/issues"
   },
-  "homepage": "https://github.com/SimRai32/tinyapp#readme"
+  "homepage": "https://github.com/SimRai32/tinyapp#readme",
+  "dependencies": {
+    "express": "^4.18.1"
+  }
 }
