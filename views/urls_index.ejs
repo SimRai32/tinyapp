@@ -38,11 +38,11 @@
   
               <td>
                 <a href="/urls/<%= id %>">
-                <button>Edit</button>
+                <button class="btn btn-outline-primary">Edit</button>
                 </a>
               </td>
               <form method="POST" action="/urls/<%= id%>/delete">
-              <td><input type = "submit" value="Delete"/></td>
+              <td><button type = "submit" class="btn btn-outline-danger">Delete</button></td>
               </form>
             </tr>
           <% } %>
