@@ -87,7 +87,18 @@ app.post("/urls/:id/edit", (req, res) => {
 });
 
 app.post("/login", (req, res) => {
-  res.cookie("username", req.body.username);
+  const userInfo = getUserByEmail(users, req.body.email);
+  if (userInfo) {
+    if (userInfo.password === req.body.password) {
+      res.cookie("user_id", userInfo.id);
+    }
+    else {
+      throw new Error("403 Forbidden:one of the parameters is incorrect");
+    }
+  }
+  else {
+    throw new Error("403 Forbidden:one of the parameters is incorrect");
+  }
   res.redirect("/urls");
 });
 
