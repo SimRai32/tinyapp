@@ -20,7 +20,7 @@
     </div>
     <% if(!username){ %>
       <form method="POST" action="/login">
-        <input type="text" name="username" placeholder="username"/> <button type="submit" class="btn btn-outline-secondary">login</button>
+        <input type="text" name="username" placeholder="username" style="width: 300px; margin: 1em"/> <button type="submit" class="btn btn-outline-secondary">login</button>
       </form>
     <% } else{ %>  
       <h5>Logged in as: <%= username %>!&nbsp;</h5><form method="POST" action="/logout">
