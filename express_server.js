@@ -64,6 +64,11 @@ app.get("/register", (req, res) => {
   res.render("urls_registry", templateVars);
 });
 
+app.get("/login", (req, res) => {
+  const templateVars = {username: req.cookies["user_id"]};
+  res.render("urls_login", templateVars);
+})
+
 app.post("/urls", (req, res) => {
   let id = generateRandomString();
   urlDatabase[id] = req.body.longURL;
