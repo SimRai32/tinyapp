@@ -10,12 +10,29 @@ function generateRandomString() {
   return Math.random().toString(36).substring(2,8);
 }
 
+const getUserByEmail = (obj, email) => {
+  if (!obj) {
+    return null;
+  }
+  const keys = Object.keys(obj);
+  for (const key of keys) {
+    if (obj[key].email === email) {
+      return obj[key];
+    }
+  }
+  return null;
+};
+
 const urlDatabase = {
   "b2xVn2": "http://www.lighthouselabs.ca",
   "9sm5xK": "http://www.google.com"
 };
 
-const users = {};
+const users = {abc123: {
+  id: "abc123",
+  email: "a@b.com",
+  password: "12",
+},};
 
 app.use(express.urlencoded({ extended: true }));
 
@@ -75,6 +92,12 @@ app.post("/logout", (req, res) => {
 });
 
 app.post("/register", (req, res) => {
+  if(!req.body.email || !req.body.password) {
+    throw new Error("400 Bad Request:Left one or more parameters empty");
+  }
+  if(getUserByEmail(users,req.body.email)) {
+    throw new Error("400 Bad Request:Email already registered");
+  }
   let id = generateRandomString();
   users[id] = {};
   users[id].id = id;
