@@ -2,7 +2,6 @@ const express = require("express");
 const cookieParser = require('cookie-parser');
 const app = express();
 const PORT = 3001;
-
 app.set("view engine", "ejs");
 app.use(cookieParser());
 
@@ -22,6 +21,19 @@ const getUserByEmail = (obj, email) => {
   }
   return null;
 };
+
+const getUserById = (obj, id) => {
+  if (!obj) {
+    return null;
+  }
+  const keys = Object.keys(obj);
+  for (const key of keys) {
+    if (obj[key].id === id) {
+      return obj[key];
+    }
+  }
+  return null;
+}
 
 const urlDatabase = {
   "b2xVn2": "http://www.lighthouselabs.ca",
@@ -55,25 +67,37 @@ app.get("/urls", (req, res) => {
 });
 
 app.get("/urls/new", (req, res) => {
+  if (!req.cookies["user_id"]) {
+    res.redirect("/login");
+  }
   const templateVars = {username:req.cookies["user_id"], user: users[req.cookies["user_id"]]};
   res.render("urls_new", templateVars);
 });
 
 app.get("/register", (req, res) => {
+  if (req.cookies["user_id"]) {
+    res.redirect("/urls");
+  }
   const templateVars = {username: req.cookies["user_id"]};
   res.render("urls_registry", templateVars);
 });
 
 app.get("/login", (req, res) => {
+  if (req.cookies["user_id"]) {
+    res.redirect("/urls");
+  }
   const templateVars = {username: req.cookies["user_id"]};
   res.render("urls_login", templateVars);
 })
 
 app.post("/urls", (req, res) => {
+  if (req.cookies["user_id"]) {
   let id = generateRandomString();
   urlDatabase[id] = req.body.longURL;
   console.log(req.body, id); // Log the POST request body to the console
   res.redirect(`/urls/${id}`);
+  }
+  res.redirect("/urls");
 });
 
 app.post("/urls/:id/delete", (req, res) => {
@@ -125,6 +149,9 @@ app.post("/register", (req, res) => {
 
 app.get("/u/:id", (req, res) => {
   const longURL = urlDatabase[req.params.id];
+  if(!longURL) {
+    throw new Error("400 Bad Request:This short URL does not exist");
+  }
   res.redirect(longURL);
 });
 

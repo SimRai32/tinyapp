@@ -18,6 +18,9 @@
   </head>
   <body>
     <%- include('../partials/_header.ejs') %>
+    <% if(!username){ %>
+      <h3>Error: You must login in to create/edit/delete any shortened URLs</h3>
+    <% } else{ %> 
     <main style="margin: 1em;">
       <h3>My URLs</h3>
       <table class="table">
@@ -45,6 +48,7 @@
               <td><button type = "submit" class="btn btn-outline-danger">Delete</button></td>
               </form>
             </tr>
+          <% } %>
           <% } %>
         </tbody>
       </table>
