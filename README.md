@@ -4,9 +4,9 @@ TinyApp is a full stack web application built with Node and Express that allows 
 
 ## Final Product
 
-!["screenshot description"](#)
-!["screenshot description"](#)
-!["screenshot description"](#)
+!["Screenshot of the URL editing page"](https://github.com/SimRai32/tinyapp/blob/master/docs/edit-page.png?raw=true)
+!["Screenshot of the registration page"](https://github.com/SimRai32/tinyapp/blob/master/docs/register-page.png?raw=true)
+!["Screenshot of the URLs page"](https://github.com/SimRai32/tinyapp/blob/master/docs/urls-page.png?raw=true)
 
 ## Dependencies
 
