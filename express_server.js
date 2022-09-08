@@ -1,10 +1,13 @@
 const express = require("express");
-const cookieParser = require('cookie-parser');
+const cookieSession = require('cookie-session')
 const bcrypt = require("bcryptjs");
 const app = express();
 const PORT = 3001;
 app.set("view engine", "ejs");
-app.use(cookieParser());
+app.use(cookieSession({
+  name: 'session',
+  keys: ["user_id"],
+}));
 function generateRandomString() {
   return Math.random().toString(36).substring(2,8);
 }
@@ -57,9 +60,9 @@ app.get("/hello", (req, res) => {
 });
 
 app.get("/urls", (req, res) => {
-  const templateVars = { username:req.cookies["user_id"], user: users[req.cookies["user_id"]], urls: urlDatabase };
-  if (req.cookies["user_id"]) {
-    const filtered = urlsForUser(req.cookies["user_id"]);
+  const templateVars = { username:req.session.user_id , user: users[req.session.user_id ], urls: urlDatabase };
+  if (req.session.user_id ) {
+    const filtered = urlsForUser(req.session.user_id );
     templateVars["urls"] = filtered;
   }
 
@@ -67,49 +70,48 @@ app.get("/urls", (req, res) => {
 });
 
 app.get("/urls/new", (req, res) => {
-  if (!req.cookies["user_id"]) {
+  if (!req.session.user_id ) {
     res.redirect("/login");
   }
-  const templateVars = {username:req.cookies["user_id"], user: users[req.cookies["user_id"]]};
+  const templateVars = {username:req.session.user_id , user: users[req.session.user_id ]};
   res.render("urls_new", templateVars);
 });
 
 app.get("/register", (req, res) => {
-  if (req.cookies["user_id"]) {
+  if (req.session.user_id ) {
     res.redirect("/urls");
   }
-  const templateVars = {username: req.cookies["user_id"],};
+  const templateVars = {username: req.session.user_id ,};
   res.render("urls_registry", templateVars);
 });
 
 app.get("/login", (req, res) => {
-  if (req.cookies["user_id"]) {
+  if (req.session.user_id ) {
     res.redirect("/urls");
   }
-  const templateVars = {username: req.cookies["user_id"]};
+  const templateVars = {username: req.session.user_id };
   res.render("urls_login", templateVars);
 });
 
 app.post("/urls", (req, res) => {
-  if (req.cookies["user_id"]) {
+  if (req.session.user_id ) {
   let id = generateRandomString();
   urlDatabase[id] = {};
-  urlDatabase[id].userID = req.cookies["user_id"];
+  urlDatabase[id].userID = req.session.user_id ;
   urlDatabase[id].longURL = req.body.longURL;
   console.log(urlDatabase[id], id); // Log the POST request body to the console
   res.redirect(`/urls/${id}`);
   }
-  res.redirect("/urls");
 });
 
 app.post("/urls/:id/delete", (req, res) => {
-  if (!req.cookies["user_id"]) {
+  if (!req.session.user_id ) {
     return res.status(400).send({message: 'Not logged in :('});
   }
   if (!urlDatabase[req.params.id]) {
     return res.status(400).send({message: 'This link does not exist :('});
   } 
-  if (!(req.cookies["user_id"] === urlDatabase[req.params.id].userID)) {
+  if (!(req.session.user_id  === urlDatabase[req.params.id].userID)) {
     return res.status(400).send({message: 'Cannot edit URL you do not own :('});
   }
  
@@ -120,13 +122,13 @@ app.post("/urls/:id/delete", (req, res) => {
 });
 
 app.post("/urls/:id/edit", (req, res) => {
-  if (!req.cookies["user_id"]) {
+  if (!req.session.user_id ) {
    return res.status(400).send({message: 'Not logged in :('});
   }
   if (!urlDatabase[req.params.id]) {
     return res.status(400).send({message: 'This link does not exist :('});
   } 
-  if (!(req.cookies["user_id"] === urlDatabase[req.params.id].userID)) {
+  if (!(req.session.user_id  === urlDatabase[req.params.id].userID)) {
     return res.status(400).send({message: 'Cannot edit URL you do not own :('});
   }
 
@@ -139,7 +141,7 @@ app.post("/login", (req, res) => {
   const password = req.body.password
   if (userInfo) {
     if (bcrypt.compareSync(password, userInfo.password)) {
-      res.cookie("user_id", userInfo.id);
+      req.session.user_id = userInfo.id;
     }
     else {
       return res.status(403).send({message: 'Email and/or password are incorrect!'});
@@ -152,7 +154,7 @@ app.post("/login", (req, res) => {
 });
 
 app.post("/logout", (req, res) => {
-  res.clearCookie("user_id");
+  req.session.user_id = null;
   res.redirect("/urls");
 });
 
@@ -169,7 +171,7 @@ app.post("/register", (req, res) => {
     users[id].id = id;
     users[id].email = req.body.email;
     users[id].password = bcrypt.hashSync(password, 10);
-    res.cookie("user_id", id);
+    req.session.user_id = id;
     res.redirect("urls");
   }
   
@@ -184,10 +186,10 @@ app.get("/u/:id", (req, res) => {
 });
 
 app.get("/urls/:id", (req, res) => {
-  if (!(req.cookies["user_id"] === urlDatabase[req.params.id].userID)) {
+  if (!(req.session.user_id  === urlDatabase[req.params.id].userID)) {
     return res.status(400).send({message: 'Cannot edit URL you do not own :('});
   }
-  const templateVars = { username: req.cookies["user_id"], user: users[req.cookies["user_id"]], id: req.params.id, longURL: urlDatabase[req.params.id].longURL };
+  const templateVars = { username: req.session.user_id , user: users[req.session.user_id ], id: req.params.id, longURL: urlDatabase[req.params.id].longURL };
   res.render("urls_show", templateVars);
 });
 
