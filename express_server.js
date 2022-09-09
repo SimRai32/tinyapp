@@ -2,6 +2,7 @@
 const express = require("express");
 const cookieSession = require('cookie-session');
 const bcrypt = require("bcryptjs");
+const methodOverride = require('method-override');
 const { generateRandomString, urlsForUser, getUserByEmail } = require("./helpers");
 const app = express();
 const PORT = 3001;
@@ -10,6 +11,7 @@ const users = {};
 
 // --------------------SETUP AND MIDDLEWARES
 app.set("view engine", "ejs");
+app.use(methodOverride('_method'));
 app.use(cookieSession({
   name: 'session',
   keys: ["user_id"],
@@ -18,7 +20,6 @@ app.use(cookieSession({
 app.use(express.urlencoded({ extended: true }));
 
 // --------------------ENDPOINTS / ROUTES
-// --------------------GET
 // --------------------BASIC TESTS
 app.get("/", (req, res) => {
   res.send("Hello!");
@@ -92,15 +93,19 @@ app.get("/u/:id", (req, res) => {
 app.get("/urls/:id", (req, res) => {
   const id = req.session.user_id;
   const urlData = urlDatabase[req.params.id];
+  // checks if the user is logged in
+  if (!id) {
+    return res.status(401).send({message: 'You need to login to access this page'});
+  }
   // checks if the URL is owned by user
-  if (!(id === urlData.userID)) {
-    return res.status(400).send({message: 'Cannot edit URL you do not own :('});
+  if (id  !== urlData.userID) {
+    return res.status(401).send({message: "You/'re trying to access a page you do not have access to"});
   }
   const templateVars = { username: id, user: users[id], id: req.params.id, longURL: urlData.longURL };
   res.render("urls_show", templateVars);
 });
 
-// --------------------PUT
+
 // --------------------CREATES THE SHORTENED URL
 
 app.post("/urls", (req, res) => {
@@ -115,7 +120,7 @@ app.post("/urls", (req, res) => {
 });
 
 // --------------------DELETES EXISTING URLS
-app.post("/urls/:id/delete", (req, res) => {
+app.delete("/urls/:id", (req, res) => {
   const id = req.session.user_id;
   const urlData = urlDatabase[req.params.id];
   // checks if user is logged in
@@ -127,7 +132,7 @@ app.post("/urls/:id/delete", (req, res) => {
     return res.status(400).send({message: 'This link does not exist :('});
   }
   // checks if the URL is owned by user
-  if (!(id  === urlData.userID)) {
+  if (id  !== urlData.userID) {
     return res.status(400).send({message: 'Cannot edit URL you do not own :('});
   }
  
@@ -136,7 +141,7 @@ app.post("/urls/:id/delete", (req, res) => {
 });
 
 // --------------------EDITS EXISTING URLS
-app.post("/urls/:id/edit", (req, res) => {
+app.put("/urls/:id/", (req, res) => {
   const id = req.session.user_id;
   const urlData = urlDatabase[req.params.id];
   // checks if user is logged in
@@ -192,6 +197,7 @@ app.post("/register", (req, res) => {
   if (getUserByEmail(users,email)) {
     return res.status(400).send({message: 'Email already registered!'});
   }
+  // stores users registration info
   let id = generateRandomString();
   users[id] = {};
   users[id].id = id;
@@ -200,8 +206,6 @@ app.post("/register", (req, res) => {
   req.session.user_id = id;
   res.redirect("urls");
 });
-
-
 
 app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}!`);
