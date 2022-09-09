@@ -1,8 +1,8 @@
 // --------------------DECLARED GLOBAL VARIABLES
 const express = require("express");
-const cookieSession = require('cookie-session');
+const cookieSession = require("cookie-session");
 const bcrypt = require("bcryptjs");
-const methodOverride = require('method-override');
+const methodOverride = require("method-override");
 const { generateRandomString, urlsForUser, getUserByEmail } = require("./helpers");
 const app = express();
 const PORT = 3001;
@@ -11,9 +11,9 @@ const users = {};
 
 // --------------------SETUP AND MIDDLEWARES
 app.set("view engine", "ejs");
-app.use(methodOverride('_method'));
+app.use(methodOverride("_method"));
 app.use(cookieSession({
-  name: 'session',
+  name: "session",
   keys: ["user_id"],
 })
 );
@@ -84,7 +84,7 @@ app.get("/login", (req, res) => {
 app.get("/u/:id", (req, res) => {
   const longURL = urlDatabase[req.params.id].longURL;
   if (!longURL) {
-    return res.status(400).send({message: 'Bad Request:This short URL does not exist'});
+    return res.status(400).send({message: "Bad Request:This short URL does not exist"});
   }
   res.redirect(longURL);
 });
@@ -95,11 +95,11 @@ app.get("/urls/:id", (req, res) => {
   const urlData = urlDatabase[req.params.id];
   // checks if the user is logged in
   if (!id) {
-    return res.status(401).send({message: 'You need to login to access this page'});
+    return res.status(401).send({message: "You need to login to access this page"});
   }
   // checks if the URL is owned by user
   if (id  !== urlData.userID) {
-    return res.status(401).send({message: "You/'re trying to access a page you do not have access to"});
+    return res.status(401).send({message: "You're trying to access a page you do not have access to"});
   }
   const templateVars = { username: id, user: users[id], id: req.params.id, longURL: urlData.longURL };
   res.render("urls_show", templateVars);
@@ -125,15 +125,15 @@ app.delete("/urls/:id", (req, res) => {
   const urlData = urlDatabase[req.params.id];
   // checks if user is logged in
   if (!id) {
-    return res.status(400).send({message: 'Not logged in :('});
+    return res.status(400).send({message: "Not logged in :("});
   }
   // checks if link exists
   if (!urlData) {
-    return res.status(400).send({message: 'This link does not exist :('});
+    return res.status(400).send({message: "This link does not exist :("});
   }
   // checks if the URL is owned by user
   if (id  !== urlData.userID) {
-    return res.status(400).send({message: 'Cannot edit URL you do not own :('});
+    return res.status(400).send({message: "Cannot edit URL you do not own :("});
   }
  
   delete urlDatabase[req.params.id];
@@ -146,15 +146,15 @@ app.put("/urls/:id/", (req, res) => {
   const urlData = urlDatabase[req.params.id];
   // checks if user is logged in
   if (!id) {
-    return res.status(400).send({message: 'Not logged in :('});
+    return res.status(400).send({message: "Not logged in :("});
   }
   // checks if link exists
   if (!urlData) {
-    return res.status(400).send({message: 'This link does not exist :('});
+    return res.status(400).send({message: "This link does not exist :("});
   }
   // checks if the URL is owned by user
   if (!(id  === urlData.userID)) {
-    return res.status(400).send({message: 'Cannot edit URL you do not own :('});
+    return res.status(400).send({message: "Cannot edit URL you do not own :("});
   }
 
   urlData.longURL = req.body.longURL;
@@ -171,10 +171,10 @@ app.post("/login", (req, res) => {
     if (bcrypt.compareSync(password, userInfo.password)) {
       req.session.user_id = userInfo.id;
     } else {
-      return res.status(403).send({message: 'Email and/or password are incorrect!'});
+      return res.status(403).send({message: "Email and/or password are incorrect!"});
     }
   } else {
-    return res.status(403).send({message: 'Email and/or password are incorrect!'});
+    return res.status(403).send({message: "Email and/or password are incorrect!"});
   }
   res.redirect("/urls");
 });
@@ -191,11 +191,11 @@ app.post("/register", (req, res) => {
   const email = req.body.email;
   // Checks if both email and password have been filled out
   if (!email || !password) {
-    return res.status(400).send({message: 'Need to fill in BOTH email and password!'});
+    return res.status(400).send({message: "Need to fill in BOTH email and password!"});
   }
   // Checks if email is in the database
   if (getUserByEmail(users,email)) {
-    return res.status(400).send({message: 'Email already registered!'});
+    return res.status(400).send({message: "Email already registered!"});
   }
   // stores users registration info
   let id = generateRandomString();
