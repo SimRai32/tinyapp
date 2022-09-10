@@ -3,7 +3,7 @@ const express = require("express");
 const cookieSession = require("cookie-session");
 const bcrypt = require("bcryptjs");
 const methodOverride = require("method-override");
-const { generateRandomString, urlsForUser, getUserByEmail } = require("./helpers");
+const { generateRandomString, urlsForUser, getUserByEmail, urlExists, checkEditAndDel, checkEdit, checkReg } = require("./helpers");
 const app = express();
 const PORT = 3001;
 const urlDatabase = {};
@@ -14,7 +14,7 @@ app.set("view engine", "ejs");
 app.use(methodOverride("_method"));
 app.use(cookieSession({
   name: "session",
-  keys: ["user_id"],
+  keys: ["user_id", "totalVisits"],
 })
 );
 app.use(express.urlencoded({ extended: true }));
@@ -35,11 +35,11 @@ app.get("/hello", (req, res) => {
 
 // --------------------URLS PAGE
 app.get("/urls", (req, res) => {
-  const id = req.session.user_id;
-  const templateVars = { username: id , user: users[id], urls: urlDatabase };
+  const userID = req.session.user_id;
+  const templateVars = { userID , user: users[userID], urls: urlDatabase };
   // Filters out URLS not made by this user
-  if (id) {
-    const filtered = urlsForUser(id, urlDatabase);
+  if (userID) {
+    const filtered = urlsForUser(userID, urlDatabase);
     templateVars["urls"] = filtered;
   }
   res.render("urls_index", templateVars);
@@ -47,61 +47,59 @@ app.get("/urls", (req, res) => {
 
 // --------------------NEW URLS PAGE
 app.get("/urls/new", (req, res) => {
-  const id = req.session.user_id;
+  const userID = req.session.user_id;
   // Checks if user is logged in, if not redirected to login page
-  if (!id) {
+  if (!userID) {
     res.redirect("/login");
   } else {
-    const templateVars = {username: id , user: users[id]};
+    const templateVars = {userID , user: users[userID]};
     res.render("urls_new", templateVars);
   }
 });
 
 // --------------------REGISTRATION PAGE
 app.get("/register", (req, res) => {
-  const id = req.session.user_id;
+  const userID = req.session.user_id;
   // If user is logged in prevents them from accessing the register page
-  if (id) {
+  if (userID) {
     res.redirect("/urls");
   } else {
-    const templateVars = { username: id };
+    const templateVars = { userID };
     res.render("urls_registry", templateVars);
   }
 });
 
 // --------------------LOGIN PAGE
 app.get("/login", (req, res) => {
-  const id = req.session.user_id;
-  if (id) {
+  const userID = req.session.user_id;
+  if (userID) {
     res.redirect("/urls");
   } else {
-    const templateVars = { username: id };
+    const templateVars = { userID };
     res.render("urls_login", templateVars);
   }
 });
 
 // --------------------REDIRECTS TO GIVEN URL
 app.get("/u/:id", (req, res) => {
-  const longURL = urlDatabase[req.params.id].longURL;
-  if (!longURL) {
-    return res.status(400).send({message: "Bad Request:This short URL does not exist"});
+  const shortLink = req.params.id;
+  if (!urlExists(shortLink, urlDatabase)) {
+    return res.status(400).send({message: "This short URL does not exist"});
   }
+  const longURL = urlDatabase[req.params.id].longURL;
   res.redirect(longURL);
 });
 
 // --------------------EXISTING URL EDITING PAGES
 app.get("/urls/:id", (req, res) => {
-  const id = req.session.user_id;
+  const userID = req.session.user_id;
   const urlData = urlDatabase[req.params.id];
-  // checks if the user is logged in
-  if (!id) {
-    return res.status(401).send({message: "You need to login to access this page"});
-  }
-  // checks if the URL is owned by user
-  if (id  !== urlData.userID) {
-    return res.status(401).send({message: "You're trying to access a page you do not have access to"});
-  }
-  const templateVars = { username: id, user: users[id], id: req.params.id, longURL: urlData.longURL };
+  const shortLink = req.params.id;
+  const potentialErr = checkEdit(userID, urlData, shortLink, urlDatabase);
+  if (potentialErr) {
+    return res.status(401).send({message: potentialErr});
+  } 
+  const templateVars = { userID, user: users[userID], shortLink: req.params.id, longURL: urlData.longURL };
   res.render("urls_show", templateVars);
 });
 
@@ -111,52 +109,37 @@ app.get("/urls/:id", (req, res) => {
 app.post("/urls", (req, res) => {
   if (req.session.user_id) {
     let id = generateRandomString();
-    urlDatabase[id] = {};
-    urlDatabase[id].userID = req.session.user_id;
-    urlDatabase[id].longURL = req.body.longURL;
-    console.log(urlDatabase[id], id); // Log the POST request body to the console
+    urlDatabase[id] = {
+      userID: req.session.user_id,
+      longURL:  req.body.longURL
+    };
     res.redirect(`/urls/${id}`);
+  }
+  else {
+    return res.status(400).send({message: "Not logged in :("});
   }
 });
 
 // --------------------DELETES EXISTING URLS
 app.delete("/urls/:id", (req, res) => {
-  const id = req.session.user_id;
+  const userID = req.session.user_id;
   const urlData = urlDatabase[req.params.id];
-  // checks if user is logged in
-  if (!id) {
-    return res.status(400).send({message: "Not logged in :("});
+  const potentialErr = checkEditAndDel(userID, urlData);
+  if (potentialErr) {
+    return res.status(400).send({message: potentialErr});
   }
-  // checks if link exists
-  if (!urlData) {
-    return res.status(400).send({message: "This link does not exist :("});
-  }
-  // checks if the URL is owned by user
-  if (id  !== urlData.userID) {
-    return res.status(400).send({message: "Cannot edit URL you do not own :("});
-  }
- 
   delete urlDatabase[req.params.id];
   res.redirect("/urls");
 });
 
 // --------------------EDITS EXISTING URLS
 app.put("/urls/:id/", (req, res) => {
-  const id = req.session.user_id;
+  const userID = req.session.user_id;
   const urlData = urlDatabase[req.params.id];
-  // checks if user is logged in
-  if (!id) {
-    return res.status(400).send({message: "Not logged in :("});
+  const potentialErr = checkEditAndDel(userID, urlData);
+  if (potentialErr) {
+    return res.status(400).send({message: potentialErr});
   }
-  // checks if link exists
-  if (!urlData) {
-    return res.status(400).send({message: "This link does not exist :("});
-  }
-  // checks if the URL is owned by user
-  if (!(id  === urlData.userID)) {
-    return res.status(400).send({message: "Cannot edit URL you do not own :("});
-  }
-
   urlData.longURL = req.body.longURL;
   res.redirect("/urls");
 });
@@ -181,7 +164,7 @@ app.post("/login", (req, res) => {
 
 // --------------------LOGS USER OUT
 app.post("/logout", (req, res) => {
-  req.session.user_id = null;
+  req.session = null;
   res.redirect("/urls");
 });
 
@@ -189,24 +172,19 @@ app.post("/logout", (req, res) => {
 app.post("/register", (req, res) => {
   const password = req.body.password;
   const email = req.body.email;
-  // Checks if both email and password have been filled out
-  if (!email || !password) {
-    return res.status(400).send({message: "Need to fill in BOTH email and password!"});
-  }
-  // Checks if email is in the database
-  if (getUserByEmail(users,email)) {
-    return res.status(400).send({message: "Email already registered!"});
+  const potentialErr = checkReg(email, password, users);
+  if (potentialErr) {
+    return res.status(400).send({message: potentialErr});
   }
   // stores users registration info
   let id = generateRandomString();
-  users[id] = {};
-  users[id].id = id;
-  users[id].email = email;
-  users[id].password = bcrypt.hashSync(password, 10);
+  users[id] = {
+    id,
+    email,
+    password: bcrypt.hashSync(password, 10),
+  };
   req.session.user_id = id;
   res.redirect("urls");
 });
 
-app.listen(PORT, () => {
-  console.log(`Example app listening on port ${PORT}!`);
-});
+app.listen(PORT, () => {});
